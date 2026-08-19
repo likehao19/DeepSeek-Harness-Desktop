@@ -14,3 +14,4 @@ src-tauri/.cargo/
 
 # secrets
 signing-key.secret
+.ci-download/

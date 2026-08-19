@@ -44,6 +44,16 @@ tauri build --bundles nsis
 # 产物：dist\DeepSeek Harness_0.1.0_x64-setup.exe
 ```
 
+## 跨平台 CI（GitHub Actions）
+`.github/workflows/build.yml` 在 tag（`v*`）推送或手动触发时构建三平台安装包：
+- **Windows x64** → NSIS 安装包
+- **macOS Apple Silicon (arm64)** → `.app` + `.dmg`
+- **macOS Intel (x64)** → `.app` + `.dmg`
+
+CI 会在对应平台的 runner 上 `npm install` dsh-runtime、下载对应的便携 Node（`node.exe` / `node`），再 `tauri build`，并把产物作为 GitHub Artifacts 上传；tag 推送时自动挂到 Release。
+
+> **macOS 与 Windows 的「头部」差异**：本壳未使用自定义标题栏，因此 macOS 上会自动获得系统的原生窗口标题栏（红绿灯按钮、统一工具栏、屏幕顶部菜单栏），与 Windows 的标题栏不同；这是原生平台行为，不是代码问题。Windows 上的系统托盘在 macOS 对应的是菜单栏状态图标。构建出的 `.app` 未签名，首次运行会触发 Gatekeeper 提示（右键→打开），正式分发需 Apple 开发者证书 + 公证。
+
 ## 无 Node 环境能否运行？
 **能。** 安装包内置了便携 Node 22 运行时（`dsh-runtime/node.exe`）与完整的 DSH 依赖树（`dsh-runtime/`）作为应用资源。运行时 Rust 壳从资源目录解析内置 `node.exe`，不依赖系统 PATH 里的 Node。本机已实测：把 Node 从 PATH 移除后运行安装后的 exe，DSH 服务照常启动并返回完整 UI。
 
