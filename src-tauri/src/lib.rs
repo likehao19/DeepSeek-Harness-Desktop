@@ -38,7 +38,7 @@ fn check_updates(app: &tauri::AppHandle) {
     });
 }
 
-/// Open the live DSH web URL in the default browser (Windows: explorer.exe).
+/// Open the live DSH web URL in the default browser.
 fn open_in_browser(app: &tauri::AppHandle) {
     let url = app
         .state::<WebState>()
@@ -47,7 +47,12 @@ fn open_in_browser(app: &tauri::AppHandle) {
         .map(|u| u.clone())
         .unwrap_or_default();
     if let Some(url) = url.filter(|u| !u.is_empty()) {
+        #[cfg(windows)]
         let _ = std::process::Command::new("explorer").arg(&url).spawn();
+        #[cfg(target_os = "macos")]
+        let _ = std::process::Command::new("open").arg(&url).spawn();
+        #[cfg(all(unix, not(target_os = "macos")))]
+        let _ = std::process::Command::new("xdg-open").arg(&url).spawn();
     }
 }
 

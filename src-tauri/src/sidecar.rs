@@ -112,21 +112,30 @@ pub fn kill(app: &AppHandle) {
     }
 }
 
+/// Bundled Node executable name: `node.exe` on Windows, `node` on macOS/Linux.
+fn node_exe_name() -> &'static str {
+    if cfg!(windows) {
+        "node.exe"
+    } else {
+        "node"
+    }
+}
+
 /// Resolve the Node binary and the dsh bin.js entry.
 ///
 /// Resolution order:
 /// 1. `DSH_DESKTOP_NODE` / `DSH_DESKTOP_RUNTIME` env overrides (packaging/dev).
 /// 2. Candidate runtime dirs derived from `resource_dir()` / `exe_dir()`,
-///    probing for a `node.exe`. The NSIS bundle may place resources either
-///    directly beside the exe or under the updater `_up_` subdir, so we check
-///    both. This lets the packaged app run on machines with no Node installed.
+///    probing for a bundled `node`/`node.exe`. The bundle may place resources
+///    either directly beside the exe or under the updater `_up_` subdir, so we
+///    check both. This lets the packaged app run with no Node installed.
 /// 3. Dev fallback: `node` on PATH + `<repo>/dsh-runtime`.
 fn resolve_runtime(app: &AppHandle) -> (PathBuf, PathBuf) {
     if let Ok(rt) = std::env::var("DSH_DESKTOP_RUNTIME") {
         let rt = PathBuf::from(rt);
         let node = std::env::var("DSH_DESKTOP_NODE")
             .map(PathBuf::from)
-            .unwrap_or_else(|_| rt.join("node.exe"));
+            .unwrap_or_else(|_| rt.join(node_exe_name()));
         return (node, rt.join("node_modules/@deepseek-ai/dsh/lib/bin.js"));
     }
 
@@ -143,13 +152,16 @@ fn resolve_runtime(app: &AppHandle) -> (PathBuf, PathBuf) {
         candidates.push(dev_runtime());
     }
     for rt in candidates {
-        let node = rt.join("node.exe");
+        let node = rt.join(node_exe_name());
         if node.exists() {
             return (normalize(node), normalize(rt.join("node_modules/@deepseek-ai/dsh/lib/bin.js")));
         }
     }
     // Fallback: dev path (may not exist; a missing node errors loudly at spawn).
-    (dev_runtime().join("node.exe"), dev_runtime().join("node_modules/@deepseek-ai/dsh/lib/bin.js"))
+    (
+        dev_runtime().join(node_exe_name()),
+        dev_runtime().join("node_modules/@deepseek-ai/dsh/lib/bin.js"),
+    )
 }
 
 /// Strip the Windows `\\?\` extended-length prefix that tauri's path resolver

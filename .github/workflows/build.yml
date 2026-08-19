@@ -1,0 +1,84 @@
+name: Build
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: "22.20.0"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-x64
+            os: windows-latest
+            rust-target: x86_64-pc-windows-msvc
+            node-asset: win-x64
+            node-file: node.exe
+          - name: macos-arm64
+            os: macos-14
+            rust-target: aarch64-apple-darwin
+            node-asset: darwin-arm64
+            node-file: node
+          - name: macos-x64
+            os: macos-13
+            rust-target: x86_64-apple-darwin
+            node-asset: darwin-x64
+            node-file: node
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-target }}
+
+      - name: Install dsh-runtime deps
+        run: npm install --prefix dsh-runtime --no-audit --no-fund --ignore-scripts
+
+      - name: Download bundled Node (${{ matrix.node-asset }})
+        shell: bash
+        run: |
+          base="https://nodejs.org/dist/v$NODE_VERSION"
+          if [ "${{ matrix.node-asset }}" = "win-x64" ]; then
+            curl -sL -o "$RUNNER_TEMP/node.zip" "$base/node-v$NODE_VERSION-win-x64.zip"
+            tar -xf "$RUNNER_TEMP/node.zip" -C "$RUNNER_TEMP"
+            cp "$RUNNER_TEMP"/node-v$NODE_VERSION-win-x64/node.exe dsh-runtime/node.exe
+          else
+            curl -sL -o "$RUNNER_TEMP/node.tar.gz" "$base/node-v$NODE_VERSION-${{ matrix.node-asset }}.tar.gz"
+            tar -xzf "$RUNNER_TEMP/node.tar.gz" -C "$RUNNER_TEMP"
+            cp "$RUNNER_TEMP"/node-v$NODE_VERSION-${{ matrix.node-asset }}/bin/node dsh-runtime/node
+            chmod +x dsh-runtime/node
+          fi
+          dsh-runtime/${{ matrix.node-file }} -v
+
+      - name: Install project deps (Tauri CLI)
+        run: npm install --no-audit --no-fund --ignore-scripts
+
+      - name: Build (${{ matrix.name }})
+        run: npx tauri build --bundles all
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: src-tauri/target/release/bundle/**
+
+      - name: Attach bundles to release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          for f in src-tauri/target/release/bundle/**/*; do
+            if [ -f "$f" ]; then gh release upload "$tag" "$f" --clobber; fi
+          done
