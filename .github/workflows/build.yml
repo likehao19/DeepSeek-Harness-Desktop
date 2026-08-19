@@ -18,17 +18,17 @@ jobs:
             os: windows-latest
             rust-target: x86_64-pc-windows-msvc
             node-asset: win-x64
-            node-file: node.exe
+            bundles: nsis
           - name: macos-arm64
             os: macos-14
             rust-target: aarch64-apple-darwin
             node-asset: darwin-arm64
-            node-file: node
+            bundles: app,dmg
           - name: macos-x64
             os: macos-13
             rust-target: x86_64-apple-darwin
             node-asset: darwin-x64
-            node-file: node
+            bundles: app,dmg
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -47,24 +47,27 @@ jobs:
       - name: Download bundled Node (${{ matrix.node-asset }})
         shell: bash
         run: |
+          set -e
           base="https://nodejs.org/dist/v$NODE_VERSION"
+          cd "$RUNNER_TEMP"
           if [ "${{ matrix.node-asset }}" = "win-x64" ]; then
-            curl -sL -o "$RUNNER_TEMP/node.zip" "$base/node-v$NODE_VERSION-win-x64.zip"
-            tar -xf "$RUNNER_TEMP/node.zip" -C "$RUNNER_TEMP"
-            cp "$RUNNER_TEMP"/node-v$NODE_VERSION-win-x64/node.exe dsh-runtime/node.exe
+            curl -sL -o node.zip "$base/node-v$NODE_VERSION-win-x64.zip"
+            tar -xf node.zip
+            cp "node-v$NODE_VERSION-win-x64/node.exe" "$GITHUB_WORKSPACE/dsh-runtime/node.exe"
+            "$GITHUB_WORKSPACE/dsh-runtime/node.exe" -v
           else
-            curl -sL -o "$RUNNER_TEMP/node.tar.gz" "$base/node-v$NODE_VERSION-${{ matrix.node-asset }}.tar.gz"
-            tar -xzf "$RUNNER_TEMP/node.tar.gz" -C "$RUNNER_TEMP"
-            cp "$RUNNER_TEMP"/node-v$NODE_VERSION-${{ matrix.node-asset }}/bin/node dsh-runtime/node
-            chmod +x dsh-runtime/node
+            curl -sL -o node.tar.gz "$base/node-v$NODE_VERSION-${{ matrix.node-asset }}.tar.gz"
+            tar -xzf node.tar.gz
+            cp "node-v$NODE_VERSION-${{ matrix.node-asset }}/bin/node" "$GITHUB_WORKSPACE/dsh-runtime/node"
+            chmod +x "$GITHUB_WORKSPACE/dsh-runtime/node"
+            "$GITHUB_WORKSPACE/dsh-runtime/node" -v
           fi
-          dsh-runtime/${{ matrix.node-file }} -v
 
       - name: Install project deps (Tauri CLI)
         run: npm install --no-audit --no-fund --ignore-scripts
 
       - name: Build (${{ matrix.name }})
-        run: npx tauri build --bundles all
+        run: npx tauri build --bundles ${{ matrix.bundles }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

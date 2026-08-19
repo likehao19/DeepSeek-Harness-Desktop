@@ -29,7 +29,6 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
     "category": "DeveloperTool",
     "shortDescription": "DeepSeek Harness desktop shell",
     "longDescription": "A Tauri 2 desktop shell embedding DeepSeek Harness (dsh web) as a bundled Node sidecar. Self-contained: no Node.js install required.",
