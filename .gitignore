@@ -1,0 +1,16 @@
+# dependencies / build output
+node_modules/
+.npm-cache/
+dsh-runtime/node_modules/
+dsh-runtime/node.exe
+dsh-runtime/*.tgz
+src-tauri/target/
+src-tauri/gen/
+dist/
+
+# local tool caches / machine-specific workarounds
+.cargo-home/
+src-tauri/.cargo/
+
+# secrets
+signing-key.secret

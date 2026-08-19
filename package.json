@@ -1,0 +1,14 @@
+{
+  "name": "deepseek-harness-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tauri 2 desktop shell embedding DeepSeek Harness (dsh web) as a Node sidecar",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "dsh:install": "npm --prefix dsh-runtime install --no-audit --no-fund"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}
