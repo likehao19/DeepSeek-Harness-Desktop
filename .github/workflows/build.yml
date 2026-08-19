@@ -25,7 +25,7 @@ jobs:
             node-asset: darwin-arm64
             bundles: app,dmg
           - name: macos-x64
-            os: macos-13
+            os: macos-14
             rust-target: x86_64-apple-darwin
             node-asset: darwin-x64
             bundles: app,dmg
